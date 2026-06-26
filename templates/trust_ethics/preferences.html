@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Trust & Privacy Preferences</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="trust-preferences-form">
+                    {% csrf_token %}
+                    
+                    <!-- Transparency Settings -->
+                    <div class="mb-4">
+                        <h5>Transparency Settings</h5>
+                        <div class="form-group">
+                            <label class="form-label">AI Explanation Depth</label>
+                            <select class="form-control" name="explanation_depth">
+                                <option value="minimal">Minimal - Basic explanations only</option>
+                                <option value="moderate" selected>Moderate - Balanced detail</option>
+                                <option value="detailed">Detailed - Comprehensive reasoning</option>
+                                <option value="technical">Technical - Include technical details</option>
+                            </select>
+                            <small class="form-text text-muted">How much detail would you like in AI explanations?</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Sharing Preferences -->
+                    <div class="mb-4">
+                        <h5>Data Sharing & Usage</h5>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="share_anonymized" id="share_anonymized" checked>
+                            <label class="form-check-label" for="share_anonymized">
+                                Allow anonymized data for system improvement
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="personalized_recommendations" id="personalized_recommendations" checked>
+                            <label class="form-check-label" for="personalized_recommendations">
+                                Enable personalized recommendations
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="emotional_analysis" id="emotional_analysis">
+                            <label class="form-check-label" for="emotional_analysis">
+                                Allow emotional state analysis
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Interaction Preferences -->
+                    <div class="mb-4">
+                        <h5>Interaction Preferences</h5>
+                        <div class="form-group">
+                            <label class="form-label">Communication Style</label>
+                            <select class="form-control" name="communication_style">
+                                <option value="direct">Direct and concise</option>
+                                <option value="balanced" selected>Balanced</option>
+                                <option value="supportive">Supportive and encouraging</option>
+                                <option value="formal">Formal and professional</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Feedback Frequency</label>
+                            <select class="form-control" name="feedback_frequency">
+                                <option value="immediate">After each interaction</option>
+                                <option value="session" selected>End of session</option>
+                                <option value="daily">Daily summary</option>
+                                <option value="weekly">Weekly review</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Ethical Boundaries -->
+                    <div class="mb-4">
+                        <h5>Ethical Boundaries</h5>
+                        <div class="form-group">
+                            <label class="form-label">Decision Autonomy Level</label>
+                            <div class="range-slider">
+                                <input type="range" class="form-range" name="autonomy_level" min="0" max="100" value="70">
+                                <div class="d-flex justify-content-between">
+                                    <small>Full AI Control</small>
+                                    <small>Balanced</small>
+                                    <small>Human Decision Only</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Risk Tolerance</label>
+                            <div class="range-slider">
+                                <input type="range" class="form-range" name="risk_tolerance" min="0" max="100" value="50">
+                                <div class="d-flex justify-content-between">
+                                    <small>Conservative</small>
+                                    <small>Moderate</small>
+                                    <small>Aggressive</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="reset" class="btn btn-secondary me-md-2">Reset to Defaults</button>
+                        <button type="submit" class="btn btn-primary">Save Preferences</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Current Settings Overview -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Current Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Explanation Depth
+                        <span class="badge bg-primary">Moderate</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Data Sharing
+                        <span class="badge bg-success">Enabled</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Personalization
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Emotional Analysis
+                        <span class="badge bg-secondary">Disabled</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Communication Style
+                        <span class="badge bg-info">Balanced</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Trust Level Indicator -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Current Trust Level</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="trust-meter mb-3">
+                    <div class="metric-value">{{ user.trust_score|floatformat:2 }}</div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-success" style="width: {{ user.trust_score|floatformat:2 }}%">
+                            {{ user.trust_score|floatformat:1 }}
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted small">
+                    Your current trust level with the AI system. Higher trust enables more personalized interactions.
+                </p>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'trust_dashboard' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-chart-line me-2"></i>Trust Dashboard
+                    </a>
+                    <a href="{% url 'ethical_metrics' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-balance-scale me-2"></i>Ethical Metrics
+                    </a>
+                    <button class="btn btn-outline-info" id="export-data-btn">
+                        <i class="fas fa-download me-2"></i>Export My Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#trust-preferences-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: '{% url "trust_preferences" %}',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    showNotification('Preferences saved successfully!', 'success');
+                }
+            }
+        });
+    });
+    
+    $('#export-data-btn').on('click', function() {
+        if (confirm('This will generate a report with all your interaction data. Continue?')) {
+            // Simulate data export
+            showNotification('Preparing your data export...', 'info');
+            setTimeout(() => {
+                showNotification('Data export ready! Download will start shortly.', 'success');
+            }, 2000);
+        }
+    });
+    
+    function showNotification(message, type) {
+        const alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                       message +
+                       '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+        $('.card-body').prepend(alert);
+        
+        setTimeout(() => {
+            alert.alert('close');
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

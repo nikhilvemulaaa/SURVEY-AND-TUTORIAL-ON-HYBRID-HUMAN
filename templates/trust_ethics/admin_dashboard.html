@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Trust Model Admin Dashboard</h2>
+<div class="card mb-3">
+  <div class="card-body">
+    <h5>Model Info</h5>
+    <ul>
+      <li>Latest model: {{ model_info.latest_model }}</li>
+      <li>Vectorizer: {{ model_info.vectorizer }}</li>
+      <li>Has calibrator: {{ model_info.has_calibrator }}</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h5>Saved Versions</h5>
+    {% if models %}
+    <ul>
+      {% for m in models %}
+      <li>{{ m }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No saved versions found.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-body">
+    <h5>Recent Trust Metrics</h5>
+    <table class="table table-sm">
+      <thead>
+        <tr><th>User</th><th>Metric</th><th>Value</th><th>Confidence</th><th>When</th></tr>
+      </thead>
+      <tbody>
+        {% for t in recent_metrics %}
+        <tr>
+          <td>{{ t.user.username }}</td>
+          <td>{{ t.metric_type }}</td>
+          <td>{{ t.value }}</td>
+          <td>{{ t.confidence }}</td>
+          <td>{{ t.timestamp }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

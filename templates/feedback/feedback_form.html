@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Provide Feedback</h4>
+            </div>
+            <div class="card-body">
+                <!-- AI Response being reviewed -->
+                <div class="alert alert-info">
+                    <h5>AI Response:</h5>
+                    <p class="mb-2">{{ ai_response.response_data }}</p>
+                    <small class="text-muted">Reasoning: {{ ai_response.reasoning }}</small>
+                </div>
+                
+                <form method="POST" id="feedback-form">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'interaction_home' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Feedback
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#feedback-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: '{% url "ajax_feedback" ai_response.id %}',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    showNotification('Feedback submitted successfully!', 'success');
+                    setTimeout(function() {
+                        window.location.href = '{% url "interaction_home" %}';
+                    }, 1500);
+                }
+            }
+        });
+    });
+    
+    function showNotification(message, type) {
+        const alert = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                       message +
+                       '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+        $('.card-body').prepend(alert);
+    }
+});
+</script>
+{% endblock %}

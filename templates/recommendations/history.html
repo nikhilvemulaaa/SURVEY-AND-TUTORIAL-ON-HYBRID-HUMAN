@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Recommendation History</h4>
+                <div>
+                    <a href="{% url 'recommendations_dashboard' %}" class="btn btn-outline-primary btn-sm me-2">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                    <a href="{% url 'generate_recommendations' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>Generate New
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <select class="form-select" id="type-filter">
+                            <option value="">All Types</option>
+                            <option value="behavioral">Behavioral</option>
+                            <option value="learning">Learning</option>
+                            <option value="interaction">Interaction</option>
+                            <option value="content">Content</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="status-filter">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="accepted">Accepted</option>
+                            <option value="implemented">Implemented</option>
+                            <option value="expired">Expired</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" id="date-filter" placeholder="From date">
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-secondary w-100" id="reset-filters">
+                            <i class="fas fa-refresh me-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+                
+                {% if recommendations %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="recommendations-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Recommendation</th>
+                                <th>Confidence</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for recommendation in recommendations %}
+                            <tr data-type="{{ recommendation.recommendation_type }}" 
+                                data-status="{% if recommendation.is_implemented %}implemented{% elif recommendation.is_accepted %}accepted{% else %}active{% endif %}">
+                                <td>
+                                    <small>{{ recommendation.created_at|date:"M j, Y" }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if recommendation.recommendation_type == 'behavioral' %}primary{% elif recommendation.recommendation_type == 'learning' %}success{% else %}info{% endif %}">
+                                        {{ recommendation.get_recommendation_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong>{{ recommendation.content }}</strong>
+                                    {% if recommendation.context %}
+                                    <br>
+                                    <small class="text-muted">
+                                        Context: 
+                                        {% for key, value in recommendation.context.items %}
+                                        <span class="badge bg-light text-dark">{{ key }}: {{ value }}</span>
+                                        {% endfor %}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div class="progress-bar" style="width: {{ recommendation.confidence|floatformat:2 }}%"></div>
+                                        </div>
+                                        <small>{{ recommendation.confidence|floatformat:2 }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if recommendation.is_implemented %}
+                                    <span class="badge bg-success">Implemented</span>
+                                    {% elif recommendation.is_accepted %}
+                                    <span class="badge bg-primary">Accepted</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if not recommendation.is_accepted %}
+                                        <button class="btn btn-outline-success accept-btn" data-id="{{ recommendation.id }}">
+                                            Accept
+                                        </button>
+                                        {% endif %}
+                                        {% if recommendation.is_accepted and not recommendation.is_implemented %}
+                                        <button class="btn btn-outline-primary implement-btn" data-id="{{ recommendation.id }}">
+                                            Implement
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-outline-info view-context-btn" data-bs-toggle="tooltip" title="View Context">
+                                            <i class="fas fa-info"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <nav aria-label="Recommendation history navigation">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">Previous</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5>No Recommendation History</h5>
+                    <p class="text-muted">Your recommendation history will appear here as you interact with the system.</p>
+                    <a href="{% url 'generate_recommendations' %}" class="btn btn-primary">
+                        <i class="fas fa-lightbulb me-2"></i>Generate Recommendations
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Statistics Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Recommendation Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="metric-value text-primary">{{ recommendations.count }}</div>
+                        <div class="text-muted">Total</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-value text-success">
+                            {{ recommendations|dictsort:"is_accepted"|length }}
+                        </div>
+                        <div class="text-muted">Accepted</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-value text-info">
+                            {{ recommendations|dictsort:"is_implemented"|length }}
+                        </div>
+                        <div class="text-muted">Implemented</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-value text-warning">
+                            {% with top=recommendations|dictsortreversed:"confidence"|slice:":1"|first %}
+                                {% if top %}
+                                    {{ top.confidence|floatformat:2 }}
+                                {% else %}
+                                    0.00
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        <div class="text-muted">Avg Confidence</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Filter functionality
+    $('#type-filter, #status-filter, #date-filter').on('change', filterTable);
+    $('#reset-filters').on('click', function() {
+        $('#type-filter, #status-filter, #date-filter').val('');
+        filterTable();
+    });
+    
+    function filterTable() {
+        const typeFilter = $('#type-filter').val();
+        const statusFilter = $('#status-filter').val();
+        const dateFilter = $('#date-filter').val();
+        
+        $('#recommendations-table tbody tr').each(function() {
+            const row = $(this);
+            const rowType = row.data('type');
+            const rowStatus = row.data('status');
+            const rowDate = row.find('td:first small').text();
+            
+            let showRow = true;
+            
+            if (typeFilter && rowType !== typeFilter) {
+                showRow = false;
+            }
+            
+            if (statusFilter && rowStatus !== statusFilter) {
+                showRow = false;
+            }
+            
+            if (dateFilter) {
+                // Simple date filtering (you might want to implement more robust date parsing)
+                if (!rowDate.includes(dateFilter)) {
+                    showRow = false;
+                }
+            }
+            
+            if (showRow) {
+                row.show();
+            } else {
+                row.hide();
+            }
+        });
+    }
+    
+    // Accept recommendation
+    $('.accept-btn').on('click', function() {
+        const recommendationId = $(this).data('id');
+        const button = $(this);
+        
+        $.ajax({
+            url: '{% url "accept_recommendation" 0 %}'.replace('0', recommendationId),
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    button.closest('tr').find('.badge').removeClass('bg-secondary').addClass('bg-primary').text('Accepted');
+                    button.closest('.btn-group').html(
+                        '<button class="btn btn-outline-primary implement-btn" data-id="' + recommendationId + '">Implement</button>' +
+                        '<button class="btn btn-outline-info view-context-btn" data-bs-toggle="tooltip" title="View Context"><i class="fas fa-info"></i></button>'
+                    );
+                }
+            }
+        });
+    });
+    
+    // Implement recommendation
+    $('.implement-btn').on('click', function() {
+        const recommendationId = $(this).data('id');
+        const button = $(this);
+        
+        $.ajax({
+            url: '{% url "implement_recommendation" 0 %}'.replace('0', recommendationId),
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    button.closest('tr').find('.badge').removeClass('bg-primary').addClass('bg-success').text('Implemented');
+                    button.remove();
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

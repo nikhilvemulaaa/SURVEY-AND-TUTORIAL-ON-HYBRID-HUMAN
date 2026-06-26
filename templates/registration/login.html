@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0 text-center">
+                    <i class="fas fa-robot me-2 text-primary"></i>
+                    HAIS Login
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Login failed!</strong> Please check your username and password.
+                </div>
+                {% endif %}
+                
+                <form method="post" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" id="id_username" 
+                               placeholder="Enter your username" required autofocus>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" id="id_password" 
+                               placeholder="Enter your password" required>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                        <label class="form-check-label" for="remember_me">Remember me</label>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" name="next" value="{{ next }}">
+                </form>
+                
+                <div class="text-center mt-4">
+                    <p class="mb-2">
+                        <a href="{% url 'password_reset' %}" class="text-decoration-none">
+                            <i class="fas fa-key me-1"></i>Forgot your password?
+                        </a>
+                    </p>
+                    <p class="mb-0">
+                        Don't have an account? 
+                        <a href="{% url 'register' %}" class="text-decoration-none fw-bold">Register here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        
+    </div>
+</div>
+{% endblock %}

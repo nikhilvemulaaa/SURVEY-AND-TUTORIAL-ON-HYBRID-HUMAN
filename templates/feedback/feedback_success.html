@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Feedback Submitted - HAIS{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card shadow">
+                <div class="card-body py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                        <h3 class="text-success">Thank You!</h3>
+                        <p class="lead">Your feedback has been successfully submitted.</p>
+                        <p class="text-muted">We appreciate your input and will use it to improve our AI systems.</p>
+                    </div>
+                    
+                    <div class="d-grid gap-2 col-8 mx-auto">
+                        <a href="{% url 'user_dashboard' %}" class="btn btn-primary">
+                            <i class="fas fa-tachometer-alt me-2"></i>Return to Dashboard
+                        </a>
+                        <a href="{% url 'submit_feedback' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-plus me-2"></i>Submit More Feedback
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

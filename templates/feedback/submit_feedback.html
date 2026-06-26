@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Submit Feedback - HAIS{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-comment-dots me-2"></i>
+                        Share Your Feedback
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        We value your opinion! Please share your experience with our AI system to help us improve.
+                    </p>
+
+                    <form method="post" id="feedbackForm">
+                        {% csrf_token %}
+                        
+                        <!-- Rating -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">How would you rate your experience?</label>
+                            <div class="rating-stars text-center">
+                                <div class="btn-group" role="group">
+                                    {% for i in "12345" %}
+                                    <input type="radio" class="btn-check" name="rating" id="rating{{ i }}" value="{{ i }}" required>
+                                    <label class="btn btn-outline-warning rating-label" for="rating{{ i }}">
+                                        <i class="fas fa-star"></i>
+                                        <span class="ms-1">{{ i }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comment -->
+                        <div class="mb-4">
+                            <label for="comment" class="form-label fw-bold">Your Comments</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="5" 
+                                      placeholder="Please share your thoughts, suggestions, or any issues you encountered..."
+                                      maxlength="1000"></textarea>
+                            <div class="form-text">
+                                <span id="charCount">0</span>/1000 characters
+                            </div>
+                        </div>
+
+                        <!-- Recent Interactions (Optional) -->
+                        {% if recent_interactions %}
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Associate with a recent interaction (optional)</label>
+                            <select class="form-select" name="interaction_id">
+                                <option value="">Select an interaction...</option>
+                                {% for interaction in recent_interactions %}
+                                <option value="{{ interaction.id }}">
+                                    {{ interaction.start_time|date:"M d, Y H:i" }} - 
+                                    {{ interaction.session_type|default:"General" }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-paper-plane me-1"></i>Submit Feedback
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.rating-label {
+    padding: 10px 15px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.rating-label:hover {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+    transform: scale(1.05);
+}
+
+.btn-check:checked + .rating-label {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+#feedbackForm {
+    transition: all 0.3s ease;
+}
+
+.submitting {
+    opacity: 0.7;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('feedbackForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const charCount = document.getElementById('charCount');
+    const comment = document.getElementById('comment');
+    
+    // Character count for comment
+    comment.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+    });
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const rating = document.querySelector('input[name="rating"]:checked');
+        if (!rating) {
+            alert('Please select a rating');
+            return;
+        }
+        
+        // Show loading state
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Submitting...';
+        submitBtn.disabled = true;
+        form.classList.add('submitting');
+        
+        // Submit form via AJAX
+        fetch('{% url "submit_feedback" %}', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: new FormData(form)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message and redirect
+                showNotification(data.message, 'success');
+                setTimeout(() => {
+                    window.location.href = '{% url "feedback_success" %}';
+                }, 1500);
+            } else {
+                showNotification(data.message, 'error');
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Submit Feedback';
+                submitBtn.disabled = false;
+                form.classList.remove('submitting');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('An error occurred. Please try again.', 'error');
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Submit Feedback';
+            submitBtn.disabled = false;
+            form.classList.remove('submitting');
+        });
+    });
+    
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert at top of form
+        form.insertBefore(notification, form.firstChild);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

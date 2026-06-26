@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ report.title }}</h4>
+                <div>
+                    <span class="badge bg-primary me-2">{{ report.report_id }}</span>
+                    {% if report.is_critical %}
+                    <span class="badge bg-danger">Critical</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Summary Section -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <h5>Summary</h5>
+                        <p class="lead">{{ report.summary }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <div class="metric-value">{{ report.confidence_scores.overall|floatformat:2 }}</div>
+                                <div class="text-muted">Overall Confidence</div>
+                                <div class="trust-indicator mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Insights Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5>Key Insights</h5>
+                        <div class="row">
+                            {% for key, value in report.insights.items %}
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <div class="metric-value">{{ value|floatformat:2 }}</div>
+                                        <div class="text-muted small">{{ key|title }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Confidence Scores -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5>Confidence Breakdown</h5>
+                        <canvas id="confidenceChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Recommendations -->
+                <div class="row">
+                    <div class="col-12">
+                        <h5>Recommendations</h5>
+                        <div class="list-group">
+                            {% for rec in report.recommendations %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ rec.action }}</h6>
+                                        <p class="mb-1 text-muted">Type: {{ rec.type|title }}</p>
+                                    </div>
+                                    <span class="badge bg-{% if rec.priority == 'high' %}danger{% elif rec.priority == 'medium' %}warning{% else %}info{% endif %}">
+                                        {{ rec.priority|title }} Priority
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                Generated on {{ report.created_at|date:"F j, Y \a\t H:i" }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    const chartData = {{ chart_data|safe }};
+    
+    const ctx = document.getElementById('confidenceChart').getContext('2d');
+    const confidenceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(chartData.confidence_scores || {}),
+            datasets: [{
+                label: 'Confidence Scores',
+                data: Object.values(chartData.confidence_scores || {}),
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 1.0,
+                    ticks: {
+                        callback: function(value) {
+                            return (value * 100) + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return (context.raw * 100).toFixed(1) + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

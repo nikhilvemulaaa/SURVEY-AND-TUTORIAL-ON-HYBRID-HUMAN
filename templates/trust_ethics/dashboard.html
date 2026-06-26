@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trust Metrics Evolution</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #3498db;
+            --primary-dark: #2980b9;
+            --secondary: #2c3e50;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #34495e;
+            --gray: #95a5a6;
+            --text: #2c3e50;
+            --border-radius: 8px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .dashboard-header {
+            background: var(--secondary);
+            color: white;
+            padding: 25px 30px;
+            border-bottom: 3px solid var(--primary);
+        }
+        
+        .dashboard-header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .dashboard-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            padding: 30px;
+        }
+        
+        .metrics-section {
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            border-left: 4px solid var(--primary);
+            transition: var(--transition);
+        }
+        
+        .metrics-section:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow);
+        }
+        
+        .metrics-section h2 {
+            color: var(--secondary);
+            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        
+        .metrics-section h2 i {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        
+        .trust-score-scale {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .score-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }
+        
+        .score-value {
+            font-weight: 600;
+            width: 50px;
+            color: var(--secondary);
+        }
+        
+        .score-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--light);
+            border-radius: 4px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+        
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger), var(--warning), var(--success));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 1s ease-in-out;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+            background: white;
+            border-radius: var(--border-radius);
+            border: 2px dashed #bdc3c7;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #bdc3c7;
+        }
+        
+        .quick-actions {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            border: 1px solid #e1e8ed;
+            margin-bottom: 25px;
+        }
+        
+        .action-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .action-item:hover {
+            background: #e8f4fd;
+            transform: translateX(5px);
+        }
+        
+        .action-checkbox {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+        }
+        
+        .trust-preferences-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .modal-header h3 {
+            color: var(--secondary);
+            font-size: 22px;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+            transition: var(--transition);
+        }
+        
+        .close-modal:hover {
+            color: var(--danger);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: var(--transition);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-block {
+            width: 100%;
+        }
+        
+        .trust-visualization {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #e1e8ed;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chart-container {
+            height: 200px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .recent-metrics-list {
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        
+        .metric-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #ecf0f1;
+            display: flex;
+            align-items: center;
+            transition: var(--transition);
+        }
+        
+        .metric-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 18px;
+        }
+        
+        .metric-details {
+            flex: 1;
+        }
+        
+        .metric-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .metric-description {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .metric-time {
+            font-size: 12px;
+            color: var(--gray);
+        }
+        
+        .trust-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .trust-high { background-color: var(--success); }
+        .trust-medium { background-color: var(--warning); }
+        .trust-low { background-color: var(--danger); }
+        
+        @media (max-width: 768px) {
+            .dashboard-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>Trust Metrics Evolution</h1>
+            <p>Monitor and manage trust relationships and ethical alignment</p>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="metrics-section">
+                <h2><i>📊</i> Trust Score</h2>
+                <div class="trust-score-scale">
+                    <div class="score-item">
+                        <span class="score-value">100%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="100"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">90%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="90"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">80%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="80"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">70%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="70"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">60%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="60"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">50%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="50"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">40%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="40"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">30%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="30"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">20%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="20"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">10%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="10"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">0%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2><i>🤝</i> Mutual Trust Overview</h2>
+                <div class="empty-state" id="mutualTrustState">
+                    <i>📊</i>
+                    <p>No mutual trust data available yet.</p>
+                    <p>Configure trust preferences to get started.</p>
+                </div>
+
+                <div class="trust-visualization" id="trustVisualization" style="display: none;">
+                    <div class="chart-container">
+                        <canvas id="trustChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="metrics-grid" id="trustMetricsGrid" style="display: none;">
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: var(--success);">85%</div>
+                        <div class="metric-label">Overall Trust</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: var(--warning);">72%</div>
+                        <div class="metric-label">Reliability</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: var(--primary);">91%</div>
+                        <div class="metric-label">Transparency</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" style="color: var(--danger);">63%</div>
+                        <div class="metric-label">Risk Level</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-section">
+                <h2><i>📈</i> Recent Trust Metrics</h2>
+                <div class="empty-state" id="recentMetricsState">
+                    <i>📈</i>
+                    <p>No trust metrics recorded yet.</p>
+                    <p>Interactions will appear here once recorded.</p>
+                </div>
+
+                <div id="recentMetrics" style="display: none;">
+                    <div class="recent-metrics-list">
+                        <div class="metric-item">
+                            <div class="metric-icon" style="background: rgba(46, 204, 113, 0.2); color: var(--success);">
+                                ↗
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-title">
+                                    <span class="trust-indicator trust-high"></span>
+                                    Trust Level Increased
+                                </div>
+                                <div class="metric-description">Positive interaction with partner organization</div>
+                            </div>
+                            <div class="metric-time">2 hours ago</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-icon" style="background: rgba(243, 156, 18, 0.2); color: var(--warning);">
+                                →
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-title">
+                                    <span class="trust-indicator trust-medium"></span>
+                                    Trust Assessment
+                                </div>
+                                <div class="metric-description">Quarterly trust evaluation completed</div>
+                            </div>
+                            <div class="metric-time">1 day ago</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-icon" style="background: rgba(231, 76, 60, 0.2); color: var(--danger);">
+                                ↘
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-title">
+                                    <span class="trust-indicator trust-low"></span>
+                                    Trust Level Decreased
+                                </div>
+                                <div class="metric-description">Missed deadline affected trust score</div>
+                            </div>
+                            <div class="metric-time">3 days ago</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-icon" style="background: rgba(52, 152, 219, 0.2); color: var(--primary);">
+                                ⚡
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-title">
+                                    <span class="trust-indicator trust-high"></span>
+                                    New Trust Relationship
+                                </div>
+                                <div class="metric-description">Established partnership with verified entity</div>
+                            </div>
+                            <div class="metric-time">1 week ago</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <h2>Quick Actions</h2>
+                    <div class="action-item" id="trustPreferencesBtn">
+                        <input type="checkbox" class="action-checkbox" id="trustPreferencesCheck">
+                        <label for="trustPreferencesCheck">Trust Preferences</label>
+                    </div>
+                    <div class="action-item">
+                        <input type="checkbox" class="action-checkbox" id="ethicalMetricsCheck" checked>
+                        <label for="ethicalMetricsCheck">Ethical Metrics</label>
+                    </div>
+                </div>
+
+                <h2><i>⚖️</i> Ethical Alignment</h2>
+                <div class="trust-score-scale">
+                    <div class="score-item">
+                        <span class="score-value">100%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="85"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-value">90%</span>
+                        <div class="score-bar">
+                            <div class="score-fill" data-width="76"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="trust-visualization" id="ethicalVisualization" style="display: none;">
+                    <div class="chart-container">
+                        <canvas id="ethicsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trust Preferences Modal -->
+    <div class="trust-preferences-modal" id="trustPreferencesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Trust Preferences</h3>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <form id="trustPreferencesForm">
+                <div class="form-group">
+                    <label for="trustThreshold">Minimum Trust Threshold</label>
+                    <input type="range" id="trustThreshold" class="form-control" min="0" max="100" value="50">
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                        <span>0%</span>
+                        <span id="thresholdValue">50%</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="autoCalculate">Auto-calculate Trust</label>
+                    <input type="checkbox" id="autoCalculate" class="form-control" checked style="width: auto; height: auto; margin-right: 10px; display: inline-block;">
+                    <span style="display: inline-block;">Enable automatic trust calculation</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="trustSources">Trust Data Sources</label>
+                    <select id="trustSources" class="form-control" multiple style="height: 100px;">
+                        <option value="interaction" selected>Interaction History</option>
+                        <option value="reputation" selected>Reputation System</option>
+                        <option value="endorsements">Endorsements</option>
+                        <option value="verification">Identity Verification</option>
+                        <option value="behavioral">Behavioral Analysis</option>
+                    </select>
+                    <small>Hold Ctrl to select multiple options</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notificationPref">Notification Preferences</label>
+                    <select id="notificationPref" class="form-control">
+                        <option value="all">All trust changes</option>
+                        <option value="significant">Only significant changes</option>
+                        <option value="threshold">Only when threshold is crossed</option>
+                        <option value="none">No notifications</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block" id="savePreferences">Save Preferences</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize score bars
+            initializeScoreBars();
+            
+            // Trust Preferences Modal Handling
+            const trustPreferencesBtn = document.getElementById('trustPreferencesBtn');
+            const trustPreferencesModal = document.getElementById('trustPreferencesModal');
+            const closeModal = document.getElementById('closeModal');
+            const trustPreferencesForm = document.getElementById('trustPreferencesForm');
+            const savePreferencesBtn = document.getElementById('savePreferences');
+            const trustThreshold = document.getElementById('trustThreshold');
+            const thresholdValue = document.getElementById('thresholdValue');
+            
+            // Open modal when Trust Preferences is clicked
+            trustPreferencesBtn.addEventListener('click', function() {
+                trustPreferencesModal.style.display = 'flex';
+            });
+            
+            // Close modal when X is clicked
+            closeModal.addEventListener('click', function() {
+                trustPreferencesModal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside content
+            trustPreferencesModal.addEventListener('click', function(e) {
+                if (e.target === trustPreferencesModal) {
+                    trustPreferencesModal.style.display = 'none';
+                }
+            });
+            
+            // Update threshold value display
+            trustThreshold.addEventListener('input', function() {
+                thresholdValue.textContent = this.value + '%';
+            });
+            
+            // Handle form submission - FIXED VERSION
+            trustPreferencesForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get form values
+                const threshold = trustThreshold.value;
+                const autoCalculate = document.getElementById('autoCalculate').checked;
+                const trustSources = Array.from(document.getElementById('trustSources').selectedOptions)
+                    .map(option => option.value);
+                const notificationPref = document.getElementById('notificationPref').value;
+                
+                // Validate form
+                if (trustSources.length === 0) {
+                    alert('Please select at least one trust data source.');
+                    return;
+                }
+                
+                // Simulate saving preferences (in a real app, this would be an API call)
+                console.log('Saving trust preferences:', {
+                    threshold,
+                    autoCalculate,
+                    trustSources,
+                    notificationPref
+                });
+                
+                // Show success message
+                alert('Trust preferences saved successfully!');
+                
+                // Update UI with sample data
+                updateTrustMetrics();
+                
+                // Close modal
+                trustPreferencesModal.style.display = 'none';
+                
+                // Update the checkbox
+                document.getElementById('trustPreferencesCheck').checked = true;
+            });
+            
+            // Initialize trust metrics with sample data after preferences are saved
+            function updateTrustMetrics() {
+                // Hide empty states
+                document.getElementById('mutualTrustState').style.display = 'none';
+                document.getElementById('recentMetricsState').style.display = 'none';
+                
+                // Show visualizations
+                document.getElementById('trustVisualization').style.display = 'block';
+                document.getElementById('trustMetricsGrid').style.display = 'grid';
+                document.getElementById('ethicalVisualization').style.display = 'block';
+                document.getElementById('recentMetrics').style.display = 'block';
+                
+                // Create trust chart
+                createTrustChart();
+                
+                // Create ethics chart
+                createEthicsChart();
+            }
+            
+            // Create trust metrics chart
+            function createTrustChart() {
+                const ctx = document.getElementById('trustChart').getContext('2d');
+                const trustChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                        datasets: [{
+                            label: 'Trust Level',
+                            data: [65, 59, 70, 71, 76, 85],
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Create ethics chart
+            function createEthicsChart() {
+                const ctx = document.getElementById('ethicsChart').getContext('2d');
+                const ethicsChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Alignment', 'Transparency', 'Accountability', 'Fairness'],
+                        datasets: [{
+                            data: [85, 76, 68, 91],
+                            backgroundColor: [
+                                '#2ecc71',
+                                '#3498db',
+                                '#f39c12',
+                                '#9b59b6'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Initialize score bars with animation
+            function initializeScoreBars() {
+                const scoreFills = document.querySelectorAll('.score-fill');
+                scoreFills.forEach(fill => {
+                    const width = fill.getAttribute('data-width');
+                    // Animate after a short delay
+                    setTimeout(() => {
+                        fill.style.width = width + '%';
+                    }, 100);
+                });
+            }
+            
+            // Initialize with some sample data after a short delay
+            setTimeout(() => {
+                updateTrustMetrics();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

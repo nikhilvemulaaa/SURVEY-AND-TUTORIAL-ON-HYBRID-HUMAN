@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Active Recommendations -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Active Recommendations</h4>
+                <a href="{% url 'generate_recommendations' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-sync-alt me-2"></i>Generate New
+                </a>
+            </div>
+            <div class="card-body">
+                {% if active_recommendations %}
+                <div class="list-group">
+                    {% for recommendation in active_recommendations %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">{{ recommendation.content }}</h6>
+                                    <span class="badge bg-{% if recommendation.recommendation_type == 'behavioral' %}primary{% elif recommendation.recommendation_type == 'learning' %}success{% else %}info{% endif %}">
+                                        {{ recommendation.get_recommendation_type_display }}
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-2">
+                                    Context: 
+                                    {% for key, value in recommendation.context.items %}
+                                    <span class="badge bg-light text-dark">{{ key }}: {{ value }}</span>
+                                    {% endfor %}
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="confidence-indicator">
+                                        <small class="text-muted">Confidence: </small>
+                                        <div class="progress" style="width: 100px; display: inline-block; margin-left: 5px;">
+                                            <div class="progress-bar" style="width: {{ recommendation.confidence|floatformat:2 }}%">
+                                                {{ recommendation.confidence|floatformat:1 }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-success btn-sm accept-btn" data-id="{{ recommendation.id }}">
+                                            <i class="fas fa-check me-1"></i>Accept
+                                        </button>
+                                        <button class="btn btn-primary btn-sm implement-btn" data-id="{{ recommendation.id }}">
+                                            <i class="fas fa-play me-1"></i>Implement
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-lightbulb fa-3x text-muted mb-3"></i>
+                    <h5>No active recommendations</h5>
+                    <p class="text-muted">Generate recommendations based on your interactions and preferences.</p>
+                    <a href="{% url 'generate_recommendations' %}" class="btn btn-primary">
+                        <i class="fas fa-lightbulb me-2"></i>Generate Recommendations
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Accepted Recommendations -->
+        {% if accepted_recommendations %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Recently Accepted</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for recommendation in accepted_recommendations %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ recommendation.content }}</h6>
+                                <small class="text-muted">Accepted on {{ recommendation.created_at|date:"M j, Y" }}</small>
+                            </div>
+                            {% if not recommendation.is_implemented %}
+                            <button class="btn btn-outline-primary btn-sm implement-btn" data-id="{{ recommendation.id }}">
+                                Mark Implemented
+                            </button>
+                            {% else %}
+                            <span class="badge bg-success">Implemented</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Recommendation Stats -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recommendation Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="metric-value">{{ active_recommendations.count }}</div>
+                    <div class="text-muted">Active Recommendations</div>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="metric-value text-success">{{ accepted_recommendations.count }}</div>
+                        <div class="text-muted small">Accepted</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-value text-primary">
+                            {{ accepted_recommendations|length|default:0 }}
+                        </div>
+                        <div class="text-muted small">Implemented</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recommendation Types -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Recommendation Types</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="typeChart" width="200" height="200"></canvas>
+            </div>
+        </div>
+        
+        <!-- Quick Links -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Links</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'recommendation_history' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-history me-2"></i>View History
+                    </a>
+                    <a href="{% url 'generate_recommendations' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-magic me-2"></i>Generate New
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Type Chart
+    const typeCtx = document.getElementById('typeChart').getContext('2d');
+    const typeChart = new Chart(typeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Behavioral', 'Learning', 'Interaction', 'Content'],
+            datasets: [{
+                data: [4, 3, 2, 1], // Sample data
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(153, 102, 255, 0.8)'
+                ]
+            }]
+        }
+    });
+    
+    // Accept recommendation
+    $('.accept-btn').on('click', function() {
+        const recommendationId = $(this).data('id');
+        $.ajax({
+            url: '{% url "accept_recommendation" 0 %}'.replace('0', recommendationId),
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                }
+            }
+        });
+    });
+    
+    // Implement recommendation
+    $('.implement-btn').on('click', function() {
+        const recommendationId = $(this).data('id');
+        $.ajax({
+            url: '{% url "implement_recommendation" 0 %}'.replace('0', recommendationId),
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
